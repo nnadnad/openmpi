@@ -14,8 +14,17 @@ Beberapa file yang harus ada dalam repositori tersebut diantaranya:
 ## Petunjuk Penggunaan Program
 Dalam direktori root lakukan kompilasi program dengan makefile:
 
-* make main
-* mpirun -np <jumlah processor> --hostfile mpi_hostfile <nama executable file> <node graph> <output file>
+* Untuk melakukan kompilasi dijkstra versi serial:
+`make serial`
+
+* Untuk melakukan kompilasi dijkstra versi paralel (mpi):
+`make paralel`
+
+* Untuk menjalankan algoritma dijkstra versi serial:
+`make serialrun <jumlah_proses> <nama_file_output>`
+
+* Untuk menjalankan algoritma dijkstra versi paralel (mpi):
+`make mpirun <jumlah_proses> <nama_file_output>`
 
 ## Pembagian Tugas
 * 13517035 - Hilmi Naufal Yafie : Paralel DIjksta, Laporan, Eksplorasi
@@ -24,10 +33,19 @@ Dalam direktori root lakukan kompilasi program dengan makefile:
 ## Laporan Pengerjaan
 ### Deskripsi Solusi Paralel
 
-Solusi yang kami lakukan dalam mengerjarkan Algoritma Dijkstra secara paralel adalah dengan membuat graph, kemudian dari adjacency matriks akan dibagi secara rata
-kestiap proses yang sedang digunakan 
-
-
+Solusi yang kami lakukan dalam mengerjarkan Algoritma Dijkstra secara paralel adalah
+dengan mengalokasikan matriks berisi jarak antar node dari graf yang dibuat ke setiap 
+proses yang disediakan secara merata, dan untuk sisa pembagian dialokasikan ke proses terakhir.
+Sehingga, setiap proses nantinya akan menyimpan subgraf dari graf jarak antar node secara merata 
+(kecuali untuk proses terakhir). Lalu, dilakukan pencarian jarak terpendek dengan algoritma 
+dijkstra dari satu node ke setiap node yang ada. Pada pencarian, pertama ditentukan dahulu 
+proses mana yang dialokasikan untuk source node yang dipilih. Lalu, inisialisasi hasil dari jarak 
+terpendek dengan jarak source node ke setiap node berdasarkan proses yang dipilih. Setelah itu, 
+broadcast hasil jarak terpendek ke setiap proses. Menggunakan hasil jarak terpendek yang telah di inisialisasi, 
+lakukan pencarian jarak terpendek dari source node ke setiap node untuk setiap proses. Nantinya,
+setiap hasil dari setiap proses akan dikumpulkan dan dicari nilai terkecilnya dengan fungsi
+MPI_Allreduce. Hal ini dilakukan berulang untuk setiap node. Hasil dari setiap pencarian nantinya disimpan 
+ke dalam graf, lalu graf tersebut dituliskan ke output file.
 
 
 ### Analisis Solusi
@@ -43,10 +61,10 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 
 | N             | Percobaan 1   | Percobaan 2 | Percobaan 3 | Rata-rata           |
 | ------------- |:-------------:| -----:| ------------- |:-------------:|
-| 100      | 0,053314 | 0,048412 | 0,065642      | 0.05578933333 |
-| 500      | 29,113564      |   29,850699 | 26,956003      | 28.6400886667 |
+| 100      | 0,053314 | 0,048412 | 0,065642      | 0.055789 |
+| 500      | 29,113564      |   29,850699 | 26,956003      | 28,640089 |
 | 1000 | 13,687153      |    14,105954 | 14,327809      | 14,040305 |
-| 3000      | 800,615266 | $1600 | col 3 is      | right-aligned |
+| 3000      | 800,615266 | 693,996518 | 661,666910      | 718,759565 |
 
 
 * **Paralel Dijkstra**
@@ -55,8 +73,8 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 | ------------- |:-------------:| -----:| ------------- |:-------------:|
 | 100      | 508,32865925   | 1007,96928275 | 786,15209475      | 767.483345583 |
 | 500      | 563,04427      |   484,21250025 | 1253,5861415      | 766.94763725 |
-| 1000     | 1914,996241    |    $1 | col 3 is      | right-aligned |
-| 3000      | right-aligned | $1600 | col 3 is      | right-aligned |
+| 1000     | 1914,996241    |    1573,43390075 | -      | - |
+| 3000      | - | - | -      | - |
 
 
 
