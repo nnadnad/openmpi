@@ -31,11 +31,13 @@ kestiap proses yang sedang digunakan
 
 
 ### Analisis Solusi
-Solusi yang kami terapkan memakai
+Berdasarkan solusi yang kami terapkan, tentunya banyak cara yang menghasilkan lebih baik dalam pengujian dan lebih mudah, 
+salah satunya paralel yang digunakan dibagian node yang dipecah dan algoritma dijkstra tidak mengalami paralelisasi.
+Kemudian pemakaian scatter dan getter dapat mengefisiensikan dalam pengiriman message ke proses lain.
 
 
 ### Hasil Uji
-Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 3000 baik untuk Serial Dijkstra dan Paralel Dijkstra :
+Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 3000 baik untuk Serial Dijkstra dan Paralel Dijkstra (dalam seconds):
 
 * **Serial Dijkstra**
 
@@ -59,4 +61,5 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 
 
 ### Analisis Uji
-
+Berdasarkan hasil uji, paralel dijkstra menghasilkan rata-rata waktu yang lebih lama, dibandingkan dengan yang serial.
+Dimana seharusnya paralel dijkstra menghasilkan waktu yang lebih cepat dibandingkan dengan serial dikarenakan menggunakan beberapa prosesor untuk membagi pekerjaan sehingga beban yang didapat lebih kecil
