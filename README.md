@@ -53,9 +53,9 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 
 | N             | Percobaan 1   | Percobaan 2 | Percobaan 3 | Rata-rata           |
 | ------------- |:-------------:| -----:| ------------- |:-------------:|
-| 100      | 508,32865925 | 1007,96928275 | 786,15209475      | 767.483345583 |
+| 100      | 508,32865925   | 1007,96928275 | 786,15209475      | 767.483345583 |
 | 500      | 563,04427      |   484,21250025 | 1253,5861415      | 766.94763725 |
-| 1000 | are neat      |    $1 | col 3 is      | right-aligned |
+| 1000     | 1914,996241    |    $1 | col 3 is      | right-aligned |
 | 3000      | right-aligned | $1600 | col 3 is      | right-aligned |
 
 
