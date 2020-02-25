@@ -70,3 +70,5 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 ### Analisis Uji
 Berdasarkan hasil uji, paralel dijkstra menghasilkan rata-rata waktu yang lebih lama, dibandingkan dengan yang serial.
 Dimana seharusnya paralel dijkstra menghasilkan waktu yang lebih cepat dibandingkan dengan serial dikarenakan menggunakan beberapa prosesor untuk membagi pekerjaan sehingga beban yang didapat lebih kecil
+Serial Dijkstra bekerja secara sekuensial, setiap task berurutan diproses dengan 1 prosesor, sehingga sehrausnya lebih lama dibanding dengan paralel dijkstra dikarenakan pada paralel, task dibagi oleh beberapa prosesor sehingga mempercepat waktu. 
+Waktu untuk sebuah task menyelesaikan tasknya bervariasi pada workload yang diproses.
