@@ -63,12 +63,14 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 | 100      | 508,32865925   | 1007,96928275 | 786,15209475      | 767.483345583 |
 | 500      | 563,04427      |   484,21250025 | 1253,5861415      | 766.94763725 |
 | 1000     | 1914,996241    |    1573,43390075 | 2882,69261825      | 2123.70758667 |
-| 3000      | - | - | -      | - |
+| 3000      | 1047,58902675 | 1522,363494 | 1008,792743      | 1192.91508792 |
 
+* **Keterangan: Untuk proses paralel node 3000 dijalankan secara lokal dikarenakan server ssh yang tidak memungkinkan untuk dipakai oleh seluruh mahasiswa ITB**
 
 
 ### Analisis Uji
 Berdasarkan hasil uji, paralel dijkstra menghasilkan rata-rata waktu yang lebih lama, dibandingkan dengan yang serial.
 Dimana seharusnya paralel dijkstra menghasilkan waktu yang lebih cepat dibandingkan dengan serial dikarenakan menggunakan beberapa prosesor untuk membagi pekerjaan sehingga beban yang didapat lebih kecil
+
 Serial Dijkstra bekerja secara sekuensial, setiap task berurutan diproses dengan 1 prosesor, sehingga sehrausnya lebih lama dibanding dengan paralel dijkstra dikarenakan pada paralel, task dibagi oleh beberapa prosesor sehingga mempercepat waktu. 
 Waktu untuk sebuah task menyelesaikan tasknya bervariasi pada workload yang diproses.
