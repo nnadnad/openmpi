@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <math.h>
 #include <time.h>
+#include <limits.h>
 #include <mpi.h>
+#include <memory.h>
 
 
 #define SEND_NODEPOS_TAG 1
 #define SEND_ALLOCATION_TAG 2
 #define SEND_COUNTS_TAG 3
 #define SEND_SUBGRAPH_TAG 4
+//#define data[i*n][j] data[i*n + j]
 
 #define ID 13517035
 /*........................................................................
@@ -34,18 +38,19 @@ static void allocate_matrix(
     int** allocation, 
     int** nodePosition, 
     int numberOfProcessor) {
-    
+    //printf("<------allocate_matrix-------->\n");
+    //printf("allocate matrix func:\n");
     int i,position;
     *allocation = malloc(numberOfProcessor * sizeof(**allocation));
     
-    if(n<=numberOfProcessor) { //rows of matrix <= number of processor
+    if(n<numberOfProcessor) { //rows of matrix <= number of processor
         
         for(i=0;i<numberOfProcessor;i++) {
             if (i<n) { 
-                *allocation[i] = 1;
+                (*allocation)[i] = 1;
             }
             else { //unused processor
-                *allocation[i] = 0;
+                (*allocation)[i] = 0;
             }
         }
     }
@@ -55,19 +60,20 @@ static void allocate_matrix(
         remainder = n % numberOfProcessor; //remainder of divided rows
 
         for(i=0;i<numberOfProcessor;i++) {
-            *allocation[i] = divide;
+            (*allocation)[i] = divide;
 
             if (i==numberOfProcessor-1) {
-                *allocation[i] += remainder; //put remainder on the last processor
+                (*allocation)[i] += remainder; //put remainder on the last processor
             }
         }
     }
     position = 0;
     *nodePosition = malloc(numberOfProcessor * sizeof(**nodePosition));
     for (i=0;i<numberOfProcessor;i++) {
-        *nodePosition[i] = position;
-        position += *allocation[i];
+        (*nodePosition)[i] = position;
+        position += (*allocation)[i];
     }
+    //printf(">------allocate_matrix--------<\n");
 }
 
 static void distribute_graph(
@@ -78,30 +84,33 @@ static void distribute_graph(
     int rank,
     int** allocation,
     int** nodePosition) {
-    
+    //printf("<-----------rank%d----------->\n",rank);
+    //printf("distribute_graph for rank %d:\n",rank);
     int i,j,k,count;
     int* subGraph = NULL;
     if (rank==0) { //at main processor
-        
+        //printf("gate 5-1\n");
         allocate_matrix(n,allocation,nodePosition,numberOfProcessor);
-
-        *data = malloc(n * *allocation[rank] *sizeof(**data)); //rows x col x sizeof data
-
-        for (i=0;i<n;i++) {
-            for(j=*nodePosition[rank];j<(*allocation[rank]+*nodePosition[rank]);j++) {
-                *data[i*n + j] = graph[i][j];
+        //printf("gate 5-2\n");
+        *data = malloc(n * (*allocation)[rank] *sizeof(**data)); //rows x col x sizeof data
+        //printf("gate 5-3\n");
+        
+        for(i=(*nodePosition)[rank];i<((*allocation)[rank]+(*nodePosition)[rank]);i++) {
+            for (j=0;j<n;j++) {    
+                (*data)[j + (i - (*nodePosition)[rank])*n] = graph[i][j];
             }
         }
-
+        //printf("gate 5-4\n");
         for (i=1;i<numberOfProcessor;i++) { //send subgraph to other processor
-            subGraph = malloc(n * *allocation[i] *sizeof(*subGraph));
-
-            for(j=0;j<n;j++) {
-                for(k=*nodePosition[i];k<(*allocation[rank]+*nodePosition[rank]);k++) {
-                    subGraph[j*n + (k-*nodePosition[rank])] = graph[j][k]; //
+            subGraph = malloc(n * (*allocation)[i] *sizeof(*subGraph));
+            
+            for(j=(*nodePosition)[i];j<((*allocation)[i] + (*nodePosition)[i]);j++) {
+                for (k=0;k<n;k++) {    
+                subGraph[k + (j - (*nodePosition)[i])*n] = graph[j][k];
                 }
             }
-            count = n * (*allocation[i]);
+
+            count = n * (*allocation)[i];
             //send every info to other processor
             //MPI_Send(&n,1,MPI_INTEGER,i,SEND_NUM_TAG,MPI_COMM_WORLD);
             MPI_Send(*nodePosition,numberOfProcessor,MPI_INTEGER,i,SEND_NODEPOS_TAG,MPI_COMM_WORLD);
@@ -110,33 +119,43 @@ static void distribute_graph(
             MPI_Send(subGraph,count,MPI_INTEGER,i,SEND_SUBGRAPH_TAG,MPI_COMM_WORLD);
 
             free(subGraph);
+            subGraph = NULL;
         }
+        //printf("gate 5-5\n");
 
     }
+
     else {
         //MPI_Recv(&n,1,);
+        //printf("gate 5-6\n");
         *nodePosition = malloc(numberOfProcessor * sizeof(**nodePosition));
         *allocation = malloc(numberOfProcessor * sizeof(**allocation));
         MPI_Recv(*nodePosition,numberOfProcessor,MPI_INTEGER,0,SEND_NODEPOS_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         MPI_Recv(*allocation,numberOfProcessor,MPI_INTEGER,0,SEND_ALLOCATION_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         MPI_Recv(&count,1,MPI_INTEGER,0,SEND_COUNTS_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
 
-        *data = malloc(n * *allocation[rank] * sizeof(**data));
-        MPI_Recv(*data,count,MPI_INTEGER,0,SEND_SUBGRAPH_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
-
+        subGraph = malloc(count * sizeof(*subGraph));
+        MPI_Recv(subGraph,count,MPI_INTEGER,0,SEND_SUBGRAPH_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+        //printf("gate 5-7\n");
+        *data = subGraph;
+        
+        free(subGraph);
+        subGraph = NULL;
     }
     MPI_Barrier(MPI_COMM_WORLD);
+    //printf(">-----------rank%d-----------<\n",rank);
 }
 
 static int** create_graph(int n) {
+    //printf("<---------create_graph-------->\n");
+    //printf("create_graph func:\n");
     int i,j;
-    int** graph = NULL;
-
-    **graph = malloc(n * sizeof(*graph));
+    //printf("gate 4-1\n");
+    int **graph = malloc(n * sizeof(*graph));
     for (i=0;i<n;i++) {
-        graph[i] = malloc(n * sizeof(int));
+        graph[i] = malloc(n * sizeof(**graph));
     }
-
+    //printf("gate 4-2\n");
 
     for (i=0;i<n;i++) {
             for (j=i;j<n;j++) {
@@ -144,16 +163,19 @@ static int** create_graph(int n) {
                     graph[i][j] = 0;
                 }
                 else {
-                    graph[i][j] = rand();
+                    graph[i][j] = rand()%100;
                     graph[j][i] = graph[i][j];
                 }
             }
         }
-    
+    //printf("gate 4-3\n");
+    //printf(">---------create_graph--------<\n");
     return graph;
 }
 
-void print_graph(int**data, int n) {
+static void print_graph(int** data, int n) {
+    //printf("<------print_graph------>\n");
+    //printf("print_graph func:\n");
     int i,j;
     for (i=0;i<n;i++) {
         for (j=0;j<n;j++) {
@@ -161,52 +183,219 @@ void print_graph(int**data, int n) {
         }
         printf("\n");
     }
+    //printf(">------print_graph------<\n");
 }
 
-void free_graph(int** data, int n) {
+static void free_graph(int** data, int n) {
+    //printf("<------free_graph------>\n");
     int i;
     for (i=0;i<n;i++) {
         free(data[i]);
     }
     
     free(data);
+    //printf(">------free_graph------<\n");
 }
 
-int main(int argc, char **argv) {
+static void dijkstra(
+    int n,
+    int numberOfProcessor,
+    int sourceNode,
+    int *data,
+    int rank,
+    int *allocation,
+    int *nodePosition,
+    int **result) {
+    
+    int i,j,sourceProcessor,minDistance,minIndex;
+    int *allResult = NULL;
+    int *localResult = NULL;
+    int *visitedNode=NULL;
+    //find which processor have the source node
+    //printf("<------dijkstra rank %d------>\n",rank);
+    for (i=0;i<numberOfProcessor;i++) {
+        if (sourceNode<nodePosition[i]) {
+            sourceProcessor = i-1;
+            break;
+        }
+        else if (i==numberOfProcessor-1) {
+            sourceProcessor=i;
+        }
+    }
 
+    //initialize visited node
+    visitedNode = malloc(n * sizeof(*visitedNode));
+    for (i=0;i<n;i++) {
+        visitedNode[i] = 0;
+    }
+
+    //intialize the result of min distance for each vertex from the source
+    localResult = malloc(n * sizeof(*localResult));
+    allResult = malloc(n * sizeof(*allResult));
+    
+    if (rank==sourceProcessor) {
+        for(i=0;i<n;i++) {
+            //result[i] = data[n*(sourceNode-nodePosition[sourceProcessor]) + i]; //data[sourceNode-nodePosition[sourceProcessor]][i]
+            allResult[i] = data[n*(sourceNode-nodePosition[sourceProcessor]) + i];
+            
+        }
+    }
+    //broadcast initial result to other process
+    MPI_Bcast(allResult,n,MPI_INTEGER,sourceProcessor,MPI_COMM_WORLD);
+    //synchronizing
+    MPI_Barrier(MPI_COMM_WORLD);
+    //set distance at sourceNode
+    minIndex = -1;
+    visitedNode[sourceNode] = 1;
+    
+    //iterate until every node is visited, each iteration must select the minimum distance
+    for (i=1;i<n;i++) {
+        minDistance = INT_MAX;
+        //find min distance
+        for (j=0;j<n;j++) {
+            if (visitedNode[j]==0 && allResult[j]<minDistance) {
+                minDistance = allResult[j];
+                minIndex = j;
+            }
+            localResult[j] = allResult[j];
+        }
+        visitedNode[minIndex] = 1; //node visited
+
+        //update dist value
+        /*
+        for (j=0;j<n;j++) {
+            if (visitedNode[j]==0 && data[n*(sourceNode-nodePosition[sourceProcessor]) + j] && 
+            allResult[minIndex]!=INT_MAX && minDistance+data[n*(sourceNode-nodePosition[sourceProcessor]) + j] < allResult[j]) {
+                localResult[j] = minDistance + data[n*(sourceNode-nodePosition[sourceProcessor]) + j];
+            }
+        }
+        */
+        for (j=0;j<allocation[rank];j++) {
+            if (visitedNode[j+nodePosition[rank]]) {
+                continue;
+            }
+            if (data[j*n+minIndex]+minDistance < localResult[j+nodePosition[rank]]) {
+                localResult[j+nodePosition[rank]] = data[j*n+minIndex]+minDistance;
+            }
+        }
+
+        MPI_Allreduce(localResult,allResult,n,MPI_INTEGER,MPI_MIN,MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+
+    free(visitedNode);
+
+    *result = allResult;
+
+    free(localResult);
+    //printf(">------dijkstra rank %d------<\n",rank);
+
+}
+
+void write_to_txt(int n, int** const graph) {
+    //printf("<------write_to_text------>\n");
+    FILE *fout;
+    int i,j;
+    if (NULL == (fout = fopen("output.txt","w"))) {
+        fprintf(stderr,"error opening output file");
+        abort();
+    }
+
+    for (i=0;i<n;i++) {
+        for(j=0;j<n;j++) {
+            fprintf(fout,"%d ",graph[i][j]);
+        }
+        fprintf(fout,"\n");
+    }
+    printf("Result has been written to output.txt ...\n");
+}
+
+void print_subgraph(int n, int* data, int* allocation, int rank) {
+    int i;
+    int count = 0;
+    //printf("<------print_subgraph rank%d------>\n",rank);
+    //printf("print_subGraph func:\n");
+    //printf("allocation[%d] = %d\n",rank,allocation[rank]);
+    for (i=0;i<n*allocation[rank];i++) {
+        printf("data[%d] = %d ",i,data[i]);
+    }
+    //printf(">------print_subgraph rank%d------<\n",rank);
+    //printf("\n");
+}
+int main(int argc, char **argv) {
+    //printf("gate 1\n");
     //check argument
     if (argc!=2) {
         fprintf(stderr,"Usage: Dijkstra num_of_node");
+        return EXIT_FAILURE;
     }
 
-    int n,size,rank;
-    double start_time, end_time;
+    int i,source,n,size,rank;
+    double start_time, end_time, total_time;
     int **graph = NULL;
-    int *matrix = NULL, *allocation = NULL, *nodePosition = NULL, *data = NULL;
-    
+    int *allocation = NULL; 
+    int *nodePosition = NULL; 
+    int *data = NULL;
+    int *result = NULL;
+    //printf("gate 2\n");
     //init mpi
     MPI_Init(NULL,NULL);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     n = atoi(argv[1]); // num_of_node
-    
+    //printf("gate 3\n");
+    srand(ID);
     //create graph
     if (rank==0) { //graph created only on main processor
+        //printf("gate 4\n");
         graph = create_graph(n);
         print_graph(graph, n); //print created graph
     }
 
     //distribute graph to each processor
+    //printf("gate 5\n");
     distribute_graph(n, size, graph, &data, rank, &allocation, &nodePosition);
-    free_graph(graph,n);
+    
     MPI_Barrier(MPI_COMM_WORLD);
 
+    //print_subgraph(n,data,allocation,rank);
     //init time
-    start_time = MPI_Wtime();
-    //do dijkstra algorithm
-    //dijsktra
-    //end time
-    end_time = MPI_Wtime();
-    //free mpi
+    total_time = 0;
+    
+    for(source=0;source < n; source++) {
+        start_time = MPI_Wtime();
+        //dijkstra algorithm
+        dijkstra(n,size,source,data,rank,allocation,nodePosition,&result);
+        end_time = MPI_Wtime();
+        
+        //collect result in main processor
+        if (rank==0) {
+            for (i=0;i<n;i++) {
+                graph[source][i] = result[i];
+            }
+        }
+        
+        total_time += end_time-start_time;
+        free(result);
+    }
+
+    //write result to file
+    if (rank==0) {
+        write_to_txt(n, graph);
+        printf("processing time: %lf sec ...\n",total_time);
+    }
+
+    //print time
+    
+    MPI_Barrier(MPI_COMM_WORLD);
+    if (rank==0) {
+        free_graph(graph,n);
+    }
+    free(nodePosition);
+    free(allocation);
+    free(data);
+    MPI_Finalize();
+    
+    return EXIT_SUCCESS;
 }
 
