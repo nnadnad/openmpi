@@ -253,7 +253,7 @@ static void dijkstra(
         minDistance = LONG_MAX;
         //find min distance
         for (j=0;j<n;j++) {
-            if (visitedNode[j]==0 && allResult[j]<minDistance) {
+            if (visitedNode[j]==0 && allResult[j]<minDistance && allResult[j]!=0) {
                 minDistance = allResult[j];
                 minIndex = j;
             }
@@ -274,7 +274,7 @@ static void dijkstra(
             if (visitedNode[j+nodePosition[rank]]) {
                 continue;
             }
-            if (data[j*n+minIndex]+minDistance < localResult[j+nodePosition[rank]]) {
+            if (data[j*n+minIndex]+minDistance < localResult[j+nodePosition[rank]] && data[j*n+minIndex]+minDistance!=0) {
                 localResult[j+nodePosition[rank]] = data[j*n+minIndex]+minDistance;
             }
         }
@@ -382,6 +382,7 @@ int main(int argc, char **argv) {
     //write result to file
     if (rank==0) {
         write_to_txt(n, graph,argv[2]);
+        printf("\n");
         printf("processing time: %lf sec ...\n",total_time);
     }
 
