@@ -1,14 +1,10 @@
-SRC := src/dijkstra.c
-MPISRC := src/dijkstra_mpi.c
+   all: program
 
-default: dijkstra_mpi
+   program: dijkstra_mpi.o
+        mpicc src/dijkstra_mpi.o -o program 
 
-dijkstra: $(SRC)
-	gcc -O3 -Wall -Wextra -o $@ $<
+   dijkstra_mpi.o: dijkstra_mpi.c
+        mpicc -o src/dijkstra_mpi.o src/dijkstra_mpi.c
 
-dijkstra_mpi: $(MPISRC)
-	mpicc -O3 -Wall -Wextra -o $@ $<
-
-
-clean: 
-	rm -f dijkstra dijkstra_mpi
+   clean:
+       rm -f src/dijkstra_mpi.o program core *~
