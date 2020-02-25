@@ -65,6 +65,7 @@ static void allocate_matrix(
             if (i==numberOfProcessor-1) {
                 (*allocation)[i] += remainder; //put remainder on the last processor
             }
+            //printf("allocation[%d] = %d \n",i,(*allocation)[i]);
         }
     }
     position = 0;
@@ -138,8 +139,7 @@ static void distribute_graph(
         MPI_Recv(subGraph,count,MPI_LONG,0,SEND_SUBGRAPH_TAG,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
         //printf("gate 5-7\n");
         *data = subGraph;
-        
-        free(subGraph);
+
     }
     MPI_Barrier(MPI_COMM_WORLD);
     //printf(">-----------rank%d-----------<\n",rank);
@@ -322,6 +322,13 @@ void print_subgraph(int n, long *data, int *allocation, int rank) {
     //printf(">------print_subgraph rank%d------<\n",rank);
     //printf("\n");
 }
+
+static double get_micros(void) {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return ((double)((long)ts.tv_sec * 1000000000L + ts.tv_nsec)/1000);
+}
+
 int main(int argc, char **argv) {
     //printf("gate 1\n");
     //check argument
@@ -343,19 +350,19 @@ int main(int argc, char **argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     n = atoi(argv[1]); // num_of_node
-    //printf("gate 3\n");
+    //printf("gate 3 rank %d\n",rank);
     srand(ID);
     //create graph
     if (rank==0) { //graph created only on main processor
         //printf("gate 4\n");
         graph = create_graph(n);
-        print_graph(graph, n); //print created graph
+        //print_graph(graph, n); //print created graph
     }
 
     //distribute graph to each processor
-    //printf("gate 5\n");
+    //printf("gate 5 rank %d\n",rank);
     distribute_graph(n, size, graph, &data, rank, &allocation, &nodePosition);
-    
+    //printf("gate 6 rank %d\n",rank);
     MPI_Barrier(MPI_COMM_WORLD);
 
     //print_subgraph(n,data,allocation,rank);
@@ -363,32 +370,36 @@ int main(int argc, char **argv) {
     total_time = 0;
     
     for(source=0;source < n; source++) {
-        start_time = MPI_Wtime();
+        start_time = get_micros();
         //dijkstra algorithm
         dijkstra(n,size,source,data,rank,allocation,nodePosition,&result);
-        end_time = MPI_Wtime();
+        end_time = get_micros();
         
         //collect result in main processor
+        
         if (rank==0) {
             for (i=0;i<n;i++) {
                 graph[source][i] = result[i];
             }
         }
         
+        
         total_time += end_time-start_time;
         free(result);
+        result = NULL;
     }
 
+    MPI_Barrier(MPI_COMM_WORLD);
+    //printf("gate 7 rank %d\n",rank);
     //write result to file
     if (rank==0) {
-        write_to_txt(n, graph,argv[2]);
         printf("\n");
-        printf("processing time: %lf sec ...\n",total_time);
+        write_to_txt(n, graph,argv[2]);
+        //print time
+        printf("processing time: %0.04lf us ...\n",total_time);
     }
 
-    //print time
     
-    MPI_Barrier(MPI_COMM_WORLD);
     if (rank==0) {
         free_graph(graph,n);
     }
@@ -396,7 +407,7 @@ int main(int argc, char **argv) {
     free(allocation);
     free(data);
     MPI_Finalize();
-    
+    //printf("gate end rank %d\n",rank);
     return EXIT_SUCCESS;
 }
 
