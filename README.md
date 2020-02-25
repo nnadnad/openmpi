@@ -43,8 +43,8 @@ Berikut Merupakan hasil uji yang kami lakukan untuk node 100, 500, 1000, dan 300
 | ------------- |:-------------:| -----:| ------------- |:-------------:|
 | 100      | 0,053314 | 0,048412 | 0,065642      | 0.05578933333 |
 | 500      | 29,113564      |   29,850699 | 26,956003      | 28.6400886667 |
-| 1000 | are neat      |    $1 | col 3 is      | right-aligned |
-| 3000      | right-aligned | $1600 | col 3 is      | right-aligned |
+| 1000 | 13,687153      |    14,105954 | 14,327809      | 14,040305 |
+| 3000      | 800,615266 | $1600 | col 3 is      | right-aligned |
 
 
 * **Paralel Dijkstra**
